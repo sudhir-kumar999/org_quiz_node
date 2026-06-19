@@ -1,17 +1,19 @@
 import express from "express";
 import { AppDataSource } from "./src/config/data-source";
-import dotenv from "dotenv"
+import dotenv from "dotenv";
 import cors from 'cors';
 import cookieParser from 'cookie-parser';
-dotenv.config()
-const app = express()
+import adminRoute from "./src/routes/adminRoutes";
+dotenv.config();
+const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
 app.get('/', (req, res) => {
-  res.send('Hello World')
-})
+  res.send('Hello World');
+});
 app.use(express.json());
 app.use(cookieParser());
 
+app.use("/admin",adminRoute);
 
 const PORT = process.env.PORT;
 AppDataSource.initialize()
@@ -20,7 +22,7 @@ AppDataSource.initialize()
 
     app.listen(PORT, () => {
       console.log(
-        `server is running at $ on port ${PORT}`,
+        `server is running at on port ${PORT}`,
       );
     });
   })

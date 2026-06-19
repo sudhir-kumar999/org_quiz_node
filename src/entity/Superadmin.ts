@@ -1,17 +1,27 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
-
+import { Column, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
+import { Organization } from './Organization';
 
 @Entity("superadmins")
 export class Superadmin{
-    @PrimaryGeneratedColumn('uuid')
-    id!:string
+    @PrimaryGeneratedColumn()
+      id!:number;
 
     @Column()
-    name!:string
+      name!:string;
+
+    @Column({unique:true})
+      email!:string;
 
     @Column()
-    email!:string
+      password!:string;
 
-    @Column()
-    password!:string
+    @Column({default:"superadmin"})
+      role!:string;
+     
+    // @OneToMany(()=>Organization,(organization)=>organization.superadmin)
+    // organization!:Organization[]
+
+
 }
+
+
