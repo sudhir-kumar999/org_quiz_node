@@ -8,15 +8,6 @@ interface decode {
 interface RequestWithRole extends Request {
   user?: decode;
 }
-
-// export interface RequestWithUser extends Request {
-//     user?: {
-//         name: string;
-//   email: string;
-//   id: string | number;
-//   role: string;
-//     };
-// }
 export const authorize = (...roles: string[]) => {
   return (req: RequestWithRole, res: Response, next: NextFunction) => {
     const user=req.user

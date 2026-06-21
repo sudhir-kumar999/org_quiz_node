@@ -1,5 +1,4 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, JoinColumn, OneToMany, CreateDateColumn } from 'typeorm';
-import { Superadmin } from "./Superadmin";
 import { User } from './User';
 
 @Entity("organizations")

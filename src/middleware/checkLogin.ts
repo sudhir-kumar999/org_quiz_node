@@ -33,6 +33,11 @@ export const checkLogin=(req:RequestWithRole,res:Response,next:NextFunction)=>{
         req.user=decode
         next()
   } catch (error) {
-        
+        if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
   }
 };

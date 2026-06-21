@@ -1,0 +1,715 @@
+import { Request, Response } from "express";
+import { AppDataSource } from "../config/data-source";
+import { User } from "../entity/User";
+import crypto from "crypto";
+import { generateAccessToken, verifyToken } from "../utils/generateToken";
+import bcrypt from "bcrypt";
+import { Organization } from "../entity/Organization";
+import { sendGrid } from "../utils/SendGrid";
+const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+const userRepo = AppDataSource.getRepository(User);
+const orgRepo = AppDataSource.getRepository(Organization);
+import {In } from "typeorm"
+interface decode {
+  name: string;
+  email: string;
+  id: string | number;
+  role: string;
+  org_id: string;
+}
+interface RequestWithRole extends Request {
+  user?: decode;
+  org_id?: string;
+}
+
+export const firstLogin = async (req: Request, res: Response) => {
+  try {
+    let { email } = req.body;
+    const { password } = req.body;
+    if (!email || !password) {
+      return res.status(401).json({
+        success: false,
+        message: "Email and Password  and name is required for login",
+      });
+    }
+    email = email.trim().toLowerCase();
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter valid email",
+      });
+    }
+    const manager = await userRepo.findOne({
+      where: {
+        email,
+        role: "manager",
+      },
+      relations: {
+        organizations: true,
+      },
+    });
+    console.log(manager);
+    if (!manager) {
+      return res.status(401).json({
+        success: false,
+        message: "Either you are not invited or you are not manager",
+      });
+    }
+    if (manager.isDefPassUsed) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "you are already logged in and change your password, try main login",
+      });
+    }
+    const verify = await bcrypt.compare(password, manager.password);
+    console.log(verify);
+    if (!verify) {
+      return res.status(401).json({
+        success: false,
+        message: "wrong password",
+      });
+    }
+    if (manager.expAt < new Date()) {
+      return res.status(401).json({
+        success: false,
+        message: "invite expire. contact superadmin",
+      });
+    }
+
+    const payload = {
+      name: manager.name,
+      id: manager.id,
+      email: manager.email,
+      role: manager.role,
+      org_id: manager.organizations.id,
+    };
+    const remainingTime = manager.expAt.getTime() - Date.now();
+    console.log(remainingTime);
+    const expiresIn = `${Math.floor(remainingTime / 1000)}s`;
+    const tempToken = generateAccessToken(payload, expiresIn);
+
+    res.clearCookie("tempToken");
+    res.cookie("tempToken", tempToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+      maxAge: remainingTime,
+    });
+    return res.status(200).json({
+      success: true,
+      message: "change your password and login again",
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};
+
+export const chnagePassword = async (req: Request, res: Response) => {
+  try {
+    let { name } = req.body;
+    const { password } = req.body;
+    const token = req.cookies.tempToken;
+    console.log(token);
+    if (!token) {
+      return res.status(401).json({
+        success: false,
+        message: "logged in first with credential send on email",
+      });
+    }
+
+    const decoded = (await verifyToken(token)) as decode;
+    console.log(decoded);
+    if (!decoded) {
+      return res.status(400).json({
+        success: false,
+        message: "invalid or token expired",
+      });
+    }
+    console.log(decoded.id);
+    console.log(decoded.role);
+    const user = await userRepo.findOne({
+      where: {
+        id: decoded.id as string,
+        role: decoded.role,
+      },
+    });
+    console.log("user", user);
+    if (!user) {
+      return res.status(400).json({
+        success: false,
+        message: "You are not allowed to change password in manager route",
+      });
+    }
+    if (user.isDefPassUsed) {
+      return res.status(400).json({
+        success: false,
+        message: "you are already logged in and changed your password",
+      });
+    }
+
+    if (user.expAt < new Date()) {
+      return res.status(400).json({
+        success: false,
+        message: "invitation expire . Contact superadmin",
+      });
+    }
+    if (password.length < 8) {
+      return res.status(200).json({
+        success: false,
+        message: "Enter 8 digit password",
+      });
+    }
+    const hash = await bcrypt.hash(password, 10);
+    user.password = hash;
+    name = name.trim();
+    user.name = name;
+    user.isDefPassUsed = true;
+    await userRepo.save(user);
+
+    res.clearCookie("tempToken");
+    return res.status(200).json({
+      success: true,
+      message: " password changed success. Now you can log in",
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};
+
+export const login = async (req: Request, res: Response) => {
+  try {
+    let { email } = req.body;
+    const { password } = req.body;
+    if (!email || !password) {
+      return res.status(401).json({
+        success: false,
+        message: "Email and Password  and name is required for login",
+      });
+    }
+    email = email.trim().toLowerCase();
+    if (!emailRegex.test(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "Please enter valid email",
+      });
+    }
+
+    const manager = await userRepo.findOne({
+      where: {
+        email,
+        role: "manager",
+      },
+      relations: {
+        organizations: true,
+      },
+    });
+    console.log(manager);
+    if (!manager) {
+      return res.status(401).json({
+        success: false,
+        message: "Either you are not invited or you are not manager",
+      });
+    }
+
+    if (!manager.isDefPassUsed) {
+      return res.status(400).json({
+        success: false,
+        message:
+          "logged in first with your credential send on email and change password the try login",
+      });
+    }
+
+    const verify = await bcrypt.compare(password, manager.password);
+    if (!verify) {
+      return res.status(401).json({
+        success: false,
+        message: "Wrong password entered",
+      });
+    }
+    const payload = {
+      name: manager.name,
+      email: manager.email,
+      id: manager.id,
+      org_id: manager.organizations.id,
+      role: manager.role,
+    };
+    // console.log(payload)
+
+    const accessToken = generateAccessToken(payload);
+    console.log(accessToken);
+
+    res.cookie("accessToken", accessToken, {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+    });
+
+    return res.status(200).json({
+      success: true,
+      message: "login successfully",
+      data: {
+        id: manager.id,
+        email: manager.email,
+        name: manager.name,
+        role: manager.role,
+      },
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};
+
+export const teacherInvite = async (req: RequestWithRole, res: Response) => {
+  try {
+    let { email } = req.body;
+    // console.log(req.user)
+    const org_id = req.user?.org_id as string;
+    const id = req.user?.id;
+    // console.log(id)
+    // console.log(org_id,"org id")
+    // console.log(typeof email)
+    //   console.log(Array.isArray(email));
+    if (!email || !Array.isArray(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "provide email of teacher in array",
+      });
+    }
+    const orgDetails = await orgRepo.findOne({
+      where: {
+        id: org_id,
+      },
+    });
+    console.log("org details", orgDetails);
+
+    if (!orgDetails) {
+      return res.status(401).json({
+        success: false,
+        message: "you are not a manager of any organization",
+      });
+    }
+
+    const manager = await userRepo.findOne({
+      where: {
+        id: id as string,
+        role: "manager",
+      },
+    });
+    //   console.log(manager,"manager")
+    if (!manager) {
+      return res.status(401).json({
+        success: false,
+        message: "you are not a manager of any organization",
+      });
+    }
+
+    console.log(email.length, "email length");
+    if (email.length > orgDetails.max_teacher) {
+      return res.status(400).json({
+        success: false,
+        message: `You can invite only ${orgDetails.max_teacher} teacher`,
+      });
+    }
+
+    const currTeacher = await userRepo.count({
+      where: {
+        role: "teacher",
+        organizations: {
+          id: org_id,
+        },
+      },
+    });
+    console.log(currTeacher, "curr teacher length");
+
+    const remainingTeacher = orgDetails.max_teacher - currTeacher;
+    console.log(remainingTeacher, "rem teacher");
+
+    if (email.length > remainingTeacher) {
+      return res.status(400).json({
+        success: false,
+        message: ` ${remainingTeacher} invitation left`,
+      });
+    }
+
+    const success = [];
+    const failed = [];
+
+    for (const emails of email) {
+      // console.log(emails);
+      email = emails.trim().toLowerCase();
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter valid email",
+        });
+      }
+
+      const user = await userRepo.findOne({
+        where: {
+          email: emails,
+        },
+      });
+      if (user) {
+        failed.push(`${emails} is already added`);
+        continue;
+      }
+      const defPassword = crypto.randomBytes(3).toString("hex");
+      const hashDefPass = await bcrypt.hash(defPassword, 10);
+
+      const teacherDetails = {
+        email: email,
+        password: hashDefPass,
+        role: "teacher",
+        organizations: {
+          id: orgDetails.id,
+        },
+        invited_by: manager,
+        expAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+      };
+      await userRepo.save(teacherDetails);
+      const template = `
+        <h1>Hello ${teacherDetails.email} you are manager of the organization ${orgDetails.title}</h1>
+        <h2>Given below your Email and default password</h2>
+        <p>Change the password after first login</p>
+        <p><strong>EMail: ${teacherDetails.email}</strong></p>
+        <p><strong>Password: ${defPassword}</strong></p>
+        <p>Login before 7 days otherwise the link will expire</p>
+        `;
+
+      const sendMail = await sendGrid(teacherDetails.email, template);
+      success.push(email);
+    }
+    res.status(200).json({
+      success: true,
+      message: "invitation mail send on teacher's mail",
+      success_email: success,
+      failedEmail: failed,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};
+
+export const reInvite = async (req: RequestWithRole, res: Response) => {
+  try {
+    let { email } = req.body;
+    const id = req.user;
+    const org_id = req.user;
+    console.log(Array.isArray(email));
+    if (!email || !Array.isArray(email)) {
+      return res.status(400).json({
+        success: false,
+        message: "provide email of teacher in array",
+      });
+    }
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "no user found. Login first",
+      });
+    }
+    const manager = await userRepo.findOne({
+      where: {
+        id: id.id as string,
+        role: "manager",
+      },
+    });
+    //   console.log(manager)
+    if (!manager) {
+      return res.status(400).json({
+        success: false,
+        message: "you are not a manager",
+      });
+    }
+    if (!org_id) {
+      return res.status(400).json({
+        success: false,
+        message: "no organization found",
+      });
+    }
+
+    const organization = await orgRepo.findOne({
+      where: {
+        id: org_id.org_id,
+      },
+    });
+
+    if (!organization) {
+      return res.status(400).json({
+        success: false,
+        message: "you are not involved in any organization",
+      });
+    }
+    //   console.log("organisation",organization)
+
+    const success = [];
+    const failed = [];
+    for (const emails of email) {
+      email = emails.trim().toLowerCase();
+      if (!emailRegex.test(email)) {
+        return res.status(400).json({
+          success: false,
+          message: "Please enter valid email",
+        });
+      }
+
+      const user = await userRepo.findOne({
+        where: {
+          email: emails,
+        },
+      });
+      console.log("user", user);
+      if (user) {
+        if (user?.isDefPassUsed) {
+          failed.push(`${emails} is already logged in no need to invite`);
+          continue;
+        }
+
+        const currDate = new Date(Date.now());
+        console.log(currDate);
+        if (user.expAt > currDate) {
+          failed.push(
+            `${emails} Resend window is only active after 7 day of invitation`,
+          );
+          continue;
+        }
+
+        const defPassword = crypto.randomBytes(3).toString("hex");
+        const hashDefPass = await bcrypt.hash(defPassword, 10);
+        user.expAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
+        // await userRepo.save(user);
+        console.log("first");
+        user.password = hashDefPass;
+        await userRepo.save(user);
+        const template = `
+        <h1>Hello ${emails} you are manager of the organization ${org_id.org_id}</h1>
+        <h2>Given below your Email and default password</h2>
+        <p>Change the password after first login</p>
+        <p><strong>EMail: ${emails}</strong></p>
+        <p><strong>Password: ${defPassword}</strong></p>
+        <p>Login before 7 days otherwise the link will expire</p>
+        `;
+
+        const sendMail = await sendGrid(emails, template);
+        // console.log(sendMail);
+        success.push(emails);
+      }
+      if (!user) {
+        failed.push(`${emails} is not invited first`);
+        continue;
+      }
+    }
+
+    res.status(200).json({
+      success: true,
+      message: "invitation mail send on teacher's mail",
+      success_email: success,
+      failedEmail: failed,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};
+
+export const teacherDetails = async (req: RequestWithRole, res: Response) => {
+  try {
+    // console.log(req.user)
+    if (!req.user) {
+      return res.status(401).json({
+        success: false,
+        message: "No user found. Login first",
+      });
+    }
+
+    const id = req.user;
+    const org_id = req.user;
+    //   console.log(id)
+    //   console.log(org_id)
+
+    if (!id) {
+      return res.status(400).json({
+        success: false,
+        message: "no user found. Login first",
+      });
+    }
+    const manager = await userRepo.findOne({
+      where: {
+        id: id.id as string,
+        role: "manager",
+      },
+    });
+    //   console.log(manager)
+    if (!manager) {
+      return res.status(400).json({
+        success: false,
+        message: "you are not a manager",
+      });
+    }
+    if (!org_id) {
+      return res.status(400).json({
+        success: false,
+        message: "no organization found",
+      });
+    }
+
+    const organization = await orgRepo.findOne({
+      where: {
+        id: org_id.org_id,
+        manager: {
+          id: manager.id,
+        },
+      },
+    });
+    // console.log("fgbdfsas",organization)
+    if (!organization) {
+      return res.status(400).json({
+        success: false,
+        message: "you are not involved in any organization",
+      });
+    }
+    const teacherData = await userRepo.find({
+      where: {
+        role: "teacher",
+        organizations: {
+          id: org_id.org_id,
+        },
+      },
+    });
+    if (!teacherData) {
+      return res.status(400).json({
+        success: false,
+        message: "no teacher found add the first",
+      });
+    }
+
+    return res.status(200).json({
+      success: true,
+      message: "Tecaher fetched successful",
+      data: teacherData,
+    });
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};
+
+export const banUsers = async (req: RequestWithRole, res: Response) => {
+  try {
+    const { userId } = req.body;
+  console.log(userId);
+  if (!req.user) {
+    return res.status(401).json({
+      success: false,
+      message: "No user found. Login first",
+    });
+  }
+
+  const id = req.user;
+  const org_id = req.user;
+  //   console.log(id)
+  //   console.log(org_id)
+
+  if (!id) {
+    return res.status(400).json({
+      success: false,
+      message: "no user found. Login first",
+    });
+  }
+  const manager = await userRepo.findOne({
+    where: {
+      id: id.id as string,
+      role: "manager",
+    },
+  });
+  //   console.log(manager)
+  if (!manager) {
+    return res.status(400).json({
+      success: false,
+      message: "you are not a manager",
+    });
+  }
+  if (!org_id) {
+    return res.status(400).json({
+      success: false,
+      message: "no organization found",
+    });
+  }
+
+  const organization = await orgRepo.findOne({
+    where: {
+      id: org_id.org_id,
+      manager: {
+        id: manager.id,
+      },
+    },
+  });
+  // console.log("fgbdfsas",organization)
+  if (!organization) {
+    return res.status(400).json({
+      success: false,
+      message: "you are not involved in any organization",
+    });
+  }
+
+  const user=await userRepo.findOne({
+    where:{
+        id:userId,
+        role: In(["teacher","user"])
+    }
+  })
+
+  if(!user){
+    return res.status(400).json({
+        success:false,
+        message:"Either no user found or You are only allowed to ban teacher and users"
+    })
+  }
+  console.log(user)
+  user.isBanned=!user.isBanned
+  await userRepo.save(user)
+  return res.status(200).json({
+    success:true,
+    message:user.isBanned?"user is banned":"user is unbanned"
+  })
+  } catch (error) {
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
+  }
+};

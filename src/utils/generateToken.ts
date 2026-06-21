@@ -8,7 +8,7 @@ interface payload extends JwtPayload {
   role:string
 }
 
-export const generateAccessToken=(payload:payload)=>{
+export const generateAccessToken=(payload:payload,expiresIn:string="7d")=>{
   const secret=process.env.JWT_SECRET as string;
   const token=jwt.sign(payload,secret);
   return token;
