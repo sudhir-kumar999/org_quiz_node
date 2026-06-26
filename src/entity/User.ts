@@ -1,5 +1,6 @@
-import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Organization } from "./Organization";
+import { Quiz } from "./Quiz";
 
 @Entity("users")
 export class User{
@@ -37,5 +38,8 @@ export class User{
     @ManyToOne (()=>User,{nullable :true})
     @JoinColumn ({name:'invited_by'})
       invited_by!:User
+
+    @OneToMany(() => Quiz, (quiz) => quiz.created_by)
+createdQuizzes!: Quiz[];
 
 }

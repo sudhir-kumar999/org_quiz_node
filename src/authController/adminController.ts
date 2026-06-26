@@ -39,6 +39,7 @@ export const adminLogin = async (req: Request, res: Response) => {
     const admin = await userRepo.findOne({
       where: {
         email,
+        role:"superadmin"
       },
     });
     if (!admin) {
@@ -76,6 +77,7 @@ export const adminLogin = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "login successfully",
+        accessToken,
       data: {
         id: admin.id,
         email: admin.email,
@@ -97,6 +99,49 @@ export const createOrg = async (req: RequestWithRole, res: Response) => {
   try {
     console.log("from org creation");
     const { title, max_teacher, max_student, email } = req.body;
+
+if (!title || !email || max_teacher === undefined || max_student === undefined) {
+  return res.status(400).json({
+    success: false,
+    message: "All fields are required",
+  });
+}
+
+if (typeof title !== "string" || title.trim().length < 3) {
+  return res.status(400).json({
+    success: false,
+    message: "Organization title must be at least 3 characters",
+  });
+}
+
+
+if (!emailRegex.test(email.trim())) {
+  return res.status(400).json({
+    success: false,
+    message: "Invalid email address",
+  });
+}
+
+const teacherLimit = Number(max_teacher);
+const studentLimit = Number(max_student);
+
+if (
+  Number.isNaN(teacherLimit) ||
+  Number.isNaN(studentLimit)
+) {
+  return res.status(400).json({
+    success: false,
+    message: "Max Teacher and Max Student must be valid numbers",
+  });
+}
+
+if (max_teacher <= 0 || max_student <= 0) {
+  return res.status(400).json({
+    success: false,
+    message: "Max Teacher and Max Student must be greater than 0",
+  });
+}
+
     const admin_id = req.user?.id;
     const admin = await userRepo.findOne({
       where: {
@@ -246,5 +291,47 @@ export const resendMail = async (req: Request, res: Response) => {
         message: error.message || "internal server error",
       });
     }
+  }
+};
+
+export const getOrganizations = async (
+  req: RequestWithRole,
+  res: Response
+) => {
+  try {
+    console.log("run")
+    const adminId = req.user?.id;
+
+    if (!adminId) {
+      return res.status(401).json({
+        success: false,
+        message: "Unauthorized",
+      });
+    }
+
+    const organizations = await orgRepo.find({
+      where: {
+        created_by: {
+          id: adminId as string,
+        },
+      },
+      relations: {
+        manager: true,
+        created_by: true,
+      },
+    });
+    console.log("check",organizations)
+
+    return res.status(200).json({
+      success: true,
+      data: organizations,
+    });
+  } catch (error) {
+    console.error(error);
+
+    return res.status(500).json({
+      success: false,
+      message: "Internal Server Error",
+    });
   }
 };

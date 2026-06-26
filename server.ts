@@ -5,6 +5,8 @@ import cors from 'cors';
 import cookieParser from 'cookie-parser';
 import adminRoute from "./src/routes/adminRoutes";
 import managerRoute from "./src/routes/managerRoutes";
+import getMeRouter from "./src/routes/getMeRoutes";
+import teacherRoute from "./src/routes/teacherRoutes";
 dotenv.config();
 const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
@@ -16,6 +18,8 @@ app.use(cookieParser());
 
 app.use("/admin",adminRoute);
 app.use("/manager",managerRoute)
+app.use("/get",getMeRouter)
+app.use("/teacher",teacherRoute)
 
 const PORT = process.env.PORT;
 AppDataSource.initialize()

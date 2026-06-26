@@ -1,5 +1,6 @@
 import { Column, Entity, ManyToOne, PrimaryGeneratedColumn, JoinColumn, OneToMany, CreateDateColumn } from 'typeorm';
 import { User } from './User';
+import { Quiz } from './Quiz';
 
 @Entity("organizations")
 export class Organization{
@@ -31,5 +32,8 @@ export class Organization{
     @ManyToOne(()=>User,{nullable:true})
     @JoinColumn({name:"manager_id"})
     manager!:User
+
+    @OneToMany(() => Quiz, (quiz) => quiz.organization)
+quizzes!: Quiz[];
 }
 
