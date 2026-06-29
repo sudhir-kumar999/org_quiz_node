@@ -1,6 +1,7 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, OneToMany, PrimaryGeneratedColumn } from "typeorm";
 import { Organization } from "./Organization";
 import { Quiz } from "./Quiz";
+import { Attempt_quiz } from "./Attempt_quiz";
 
 @Entity("users")
 export class User{
@@ -41,5 +42,8 @@ export class User{
 
     @OneToMany(() => Quiz, (quiz) => quiz.created_by)
 createdQuizzes!: Quiz[];
+
+@OneToMany(()=>Attempt_quiz,(attempt)=>attempt.student)
+  attempts!:Attempt_quiz[]
 
 }

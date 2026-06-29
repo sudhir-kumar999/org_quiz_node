@@ -115,9 +115,9 @@ export const chnagePassword = async (req: RequestWithRole, res: Response) => {
   try {
     let { name } = req.body;
     const { password } = req.body;
-    console.log(name, password)
+    console.log(name, password);
     const token = req.cookies.tempToken;
-    console.log("EFWDSAS",token);
+    console.log("EFWDSAS", token);
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -126,7 +126,7 @@ export const chnagePassword = async (req: RequestWithRole, res: Response) => {
     }
 
     const decoded = (await verifyToken(token)) as decode;
-    console.log("gefwds",decoded);
+    console.log("manager", decoded);
     if (!decoded) {
       return res.status(400).json({
         success: false,
@@ -162,7 +162,7 @@ export const chnagePassword = async (req: RequestWithRole, res: Response) => {
       });
     }
     if (password.length < 8) {
-      return res.status(200).json({
+      return res.status(400).json({
         success: false,
         message: "Enter 8 digit password",
       });
@@ -174,7 +174,13 @@ export const chnagePassword = async (req: RequestWithRole, res: Response) => {
     user.isDefPassUsed = true;
     await userRepo.save(user);
 
-    res.clearCookie("tempToken");
+    // res.clearCookie("tempToken");
+    res.clearCookie("tempToken", {
+      httpOnly: true,
+      secure: true,
+      sameSite: "none",
+      path: "/",
+    });
     return res.status(200).json({
       success: true,
       message: " password changed success. Now you can log in",
@@ -224,14 +230,6 @@ export const login = async (req: Request, res: Response) => {
       });
     }
 
-    // if (!manager.isDefPassUsed) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message:
-    //       "logged in first with your credential send on email and change password the try login",
-    //   });
-    // }
-
     const verify = await bcrypt.compare(password, manager.password);
     if (!verify) {
       return res.status(401).json({
@@ -239,14 +237,6 @@ export const login = async (req: Request, res: Response) => {
         message: "Wrong password entered",
       });
     }
-
-    // if (manager.isDefPassUsed) {
-    //   return res.status(400).json({
-    //     success: false,
-    //     message:
-    //       "you are already changed your password, try login",
-    //   });
-    // }
 
     if (!manager.isDefPassUsed) {
       if (manager.expAt < new Date()) {
@@ -437,12 +427,14 @@ export const teacherInvite = async (req: RequestWithRole, res: Response) => {
       };
       await userRepo.save(teacherDetails);
       const template = `
-        <h1>Hello ${teacherDetails.email} you are manager of the organization ${orgDetails.title}</h1>
+        <h1>Hello ${teacherDetails.email} you are teacher of the organization ${orgDetails.title}</h1>
         <h2>Given below your Email and default password</h2>
         <p>Change the password after first login</p>
         <p><strong>EMail: ${teacherDetails.email}</strong></p>
         <p><strong>Password: ${defPassword}</strong></p>
         <p>Login before 7 days otherwise the link will expire</p>
+        <a href="https://quiz-portal-seven.vercel.app/auth/login">Click here</a>
+
         `;
 
       const sendMail = await sendGrid(teacherDetails.email, template);
@@ -592,7 +584,6 @@ export const teacherInvite = async (req: RequestWithRole, res: Response) => {
 //   }
 // };
 
-
 export const reInvite = async (req: RequestWithRole, res: Response) => {
   try {
     let { email } = req.body;
@@ -691,7 +682,8 @@ export const reInvite = async (req: RequestWithRole, res: Response) => {
     if (user.expAt > new Date()) {
       return res.status(400).json({
         success: false,
-        message: "Re-invitation is allowed only after invitation expires (7 days)",
+        message:
+          "Re-invitation is allowed only after invitation expires (7 days)",
       });
     }
 
@@ -714,6 +706,8 @@ export const reInvite = async (req: RequestWithRole, res: Response) => {
       <p>Please login and change your password.</p>
 
       <p>This invitation will expire after 7 days.</p>
+        <a href="https://quiz-portal-seven.vercel.app/auth/login">Click here</a>
+
     `;
 
     await sendGrid(email, template);
@@ -794,7 +788,7 @@ export const teacherDetails = async (req: RequestWithRole, res: Response) => {
     }
     const teacherData = await userRepo.find({
       where: {
-        role: In(["teacher","student"]),
+        role: In(["teacher", "student"]),
         organizations: {
           id: org_id.org_id,
         },
@@ -825,7 +819,7 @@ export const teacherDetails = async (req: RequestWithRole, res: Response) => {
 export const banUsers = async (req: RequestWithRole, res: Response) => {
   try {
     const { userId } = req.body;
-    console.log("hrgewrfedwsqa",userId);
+    console.log("hrgewrfedwsqa", userId);
     if (!req.user) {
       return res.status(401).json({
         success: false,

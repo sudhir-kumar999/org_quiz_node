@@ -5,10 +5,18 @@ import {
   ManyToOne,
   JoinColumn,
   CreateDateColumn,
+  OneToMany,
 } from "typeorm";
 import { User } from "./User";
 import { Organization } from "./Organization";
-
+import { Attempt_quiz } from "./Attempt_quiz";
+interface QuizQuestion {
+  type: "true_false" | "multiple_choice";
+  question: string;
+  options?: string[];
+  correctOptions: number[] | boolean;
+  marks: number;
+}
 @Entity("quizzes")
 export class Quiz {
   @PrimaryGeneratedColumn("uuid")
@@ -24,12 +32,15 @@ export class Quiz {
     type: "jsonb",
     default: [],
   })
-  questions!: {
-    question: string;
-    options: string[];
-    correctOption: number;
-    marks: number;
-  }[];
+  // questions!: {
+  //   [x: string]:any;
+  //   type: "true_false" | "multiple_choice"
+  //   question: string;
+  //   options: string[];
+  //   correctOption: number;
+  //   marks: number;
+  // }[];
+  questions!: QuizQuestion[];
 
   @Column({
     default: 0,
@@ -55,12 +66,6 @@ export class Quiz {
     default: 30,
   })
   duration!: number; // minutes
-
-  @Column({
-    default: true,
-  })
-  show_result!: boolean;
-
   @Column({
     default: true,
   })
@@ -84,4 +89,9 @@ export class Quiz {
     name: "organization_id",
   })
   organization!: Organization;
+
+  @OneToMany(()=>Attempt_quiz,(attempt)=>attempt.quiz)
+  attempts!:Attempt_quiz[]
+
+
 }

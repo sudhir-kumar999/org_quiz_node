@@ -7,6 +7,7 @@ import adminRoute from "./src/routes/adminRoutes";
 import managerRoute from "./src/routes/managerRoutes";
 import getMeRouter from "./src/routes/getMeRoutes";
 import teacherRoute from "./src/routes/teacherRoutes";
+import studentRoute from "./src/routes/studentRoutes";
 dotenv.config();
 const app = express();
 app.use(cors({ origin: process.env.CORS_ORIGIN, credentials: true }));
@@ -20,6 +21,7 @@ app.use("/admin",adminRoute);
 app.use("/manager",managerRoute)
 app.use("/get",getMeRouter)
 app.use("/teacher",teacherRoute)
+app.use("/student",studentRoute)
 
 const PORT = process.env.PORT;
 AppDataSource.initialize()
