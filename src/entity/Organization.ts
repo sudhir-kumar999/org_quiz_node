@@ -14,37 +14,37 @@ import { Attempt_quiz } from "./Attempt_quiz";
 @Entity("organizations")
 export class Organization {
   @PrimaryGeneratedColumn("uuid")
-  id!: string;
+    id!: string;
 
   @Column()
-  title!: string;
+    title!: string;
 
   @Column()
-  max_teacher!: number;
+    max_teacher!: number;
 
   @Column()
-  max_student!: number;
+    max_student!: number;
 
   @Column({ default: "ACTIVE" })
-  status!: string;
+    status!: string;
 
   @CreateDateColumn()
-  created_at!: Date;
+    created_at!: Date;
 
   @ManyToOne(() => User, (user) => user.organizations, { onDelete: "SET NULL" })
   @JoinColumn({ name: "created_by" })
-  created_by!: User;
+    created_by!: User;
 
   @OneToMany(() => User, (user) => user.organizations)
-  users!: User[];
+    users!: User[];
 
   @ManyToOne(() => User, { nullable: true })
   @JoinColumn({ name: "manager_id" })
-  manager!: User;
+    manager!: User;
 
   @OneToMany(() => Quiz, (quiz) => quiz.organization)
-  quizzes!: Quiz[];
+    quizzes!: Quiz[];
 
   @OneToMany(() => Attempt_quiz, (attempt) => attempt.organization)
-  attempts!: Attempt_quiz[];
+    attempts!: Attempt_quiz[];
 }

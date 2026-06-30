@@ -1,5 +1,5 @@
-import sgMail from '@sendgrid/mail'
-sgMail.setApiKey(process.env.SENDGRID_API_KEY as string)
+import sgMail from "@sendgrid/mail";
+sgMail.setApiKey(process.env.SENDGRID_API_KEY as string);
 
 const key = process.env.SENDGRID_API_KEY;
 export const sendGrid = (to: string, template: string) => {
@@ -11,13 +11,13 @@ export const sendGrid = (to: string, template: string) => {
     html: template,
   };
 
-sgMail
-  .send(msg)
-  .then((response) => {
-    console.log(response[0].statusCode)
-    console.log(response[0].headers)
-  })
-  .catch((error) => {
-    console.error(error)
-  })
-}
+  sgMail
+    .send(msg)
+    .then((response) => {
+      console.log(response[0].statusCode);
+      console.log(response[0].headers);
+    })
+    .catch((error) => {
+      console.error(error);
+    });
+};

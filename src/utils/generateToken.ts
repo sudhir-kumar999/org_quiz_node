@@ -1,5 +1,5 @@
 import { JwtPayload } from "jsonwebtoken";
-import jwt from 'jsonwebtoken';
+import jwt from "jsonwebtoken";
 
 interface payload extends JwtPayload {
   name: string;
@@ -16,5 +16,5 @@ export const generateAccessToken=(payload:payload,expiresIn:string="7d")=>{
 
 export const verifyToken=(token:string)=>{
   const secret=process.env.JWT_SECRET as string;
-  return jwt.verify(token,secret)
-}
+  return jwt.verify(token,secret);
+};

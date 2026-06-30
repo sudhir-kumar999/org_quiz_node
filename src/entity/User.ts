@@ -5,45 +5,44 @@ import { Attempt_quiz } from "./Attempt_quiz";
 
 @Entity("users")
 export class User{
-    @PrimaryGeneratedColumn('uuid')
-      id!:string
+    @PrimaryGeneratedColumn("uuid")
+      id!:string;
 
     @Column({nullable :true})
-      name!:string
+      name!:string;
 
     @Column()
-      email!:string
+      email!:string;
 
     @Column()
-      password!:string 
+      password!:string; 
 
     @Column()
-      role!:string
+      role!:string;
 
     @Column({default:false})
-      isBanned!:boolean
+      isBanned!:boolean;
 
     @Column({default:false})
-      isDefPassUsed!:boolean
+      isDefPassUsed!:boolean;
 
     @CreateDateColumn()
-      created_at!:Date
+      created_at!:Date;
 
     @Column({nullable :true})
-    expAt!: Date;
+      expAt!: Date;
 
     @ManyToOne(() => Organization,(organization)=>organization.users,{ onDelete: "SET NULL" })
     @JoinColumn({ name: "org_id" })
       organizations!: Organization;
 
     @ManyToOne (()=>User,{nullable :true})
-    @JoinColumn ({name:'invited_by'})
-      invited_by!:User
+    @JoinColumn ({name:"invited_by"})
+      invited_by!:User;
 
     @OneToMany(() => Quiz, (quiz) => quiz.created_by)
-createdQuizzes!: Quiz[];
+      createdQuizzes!: Quiz[];
 
 @OneToMany(()=>Attempt_quiz,(attempt)=>attempt.student)
-  attempts!:Attempt_quiz[]
-
+  attempts!:Attempt_quiz[];
 }

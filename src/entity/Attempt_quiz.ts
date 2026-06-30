@@ -1,39 +1,38 @@
 import { Column, CreateDateColumn, Entity, JoinColumn, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
 import { User } from "./User";
 import { Quiz } from "./Quiz";
-import { Organization } from './Organization';
+import { Organization } from "./Organization";
 
 @Entity("attempt_quizzes")
 export class Attempt_quiz{
     @PrimaryGeneratedColumn("uuid")
-    id!:string
+      id!:string;
 
     @Column({type:"jsonb",default:[]})
-    answer!:{
+      answer!:{
         Que_index:number
         selectedTF:boolean
         selectedoptions:number[]
-    }[]
+    }[];
 
     @Column({default:0})
-    obt_marks!:number
+      obt_marks!:number;
 
     @Column({default:false})
-    isSubmitted!:boolean
+      isSubmitted!:boolean;
 
     @CreateDateColumn()
-    submitted_At!:Date
+      submitted_At!:Date;
 
     @ManyToOne(()=>User,{onDelete:"CASCADE"})
     @JoinColumn({name:"student_id"})
-    student!:User
+      student!:User;
 
     @ManyToOne(()=>Quiz,{onDelete:"CASCADE"})
     @JoinColumn({name:"quiz_id"})
-    quiz!:Quiz
+      quiz!:Quiz;
 
     @ManyToOne(()=>Organization,{onDelete:"CASCADE"})
     @JoinColumn({name:"org_id"})
-    organization!:Organization
-    
+      organization!:Organization;
 }

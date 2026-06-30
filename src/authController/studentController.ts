@@ -4,14 +4,10 @@ import { User } from "../entity/User";
 import { Organization } from "../entity/Organization";
 import { generateAccessToken, verifyToken } from "../utils/generateToken";
 import bcrypt from "bcrypt";
-import { sendGrid } from "../utils/SendGrid";
-import crypto from "crypto";
-import { In } from "typeorm";
 import { Quiz } from "../entity/Quiz";
 import { Attempt_quiz } from "../entity/Attempt_quiz";
 const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 const userRepo = AppDataSource.getRepository(User);
-const orgRepo = AppDataSource.getRepository(Organization);
 const quizRepo = AppDataSource.getRepository(Quiz);
 const attemptRepo = AppDataSource.getRepository(Attempt_quiz);
 interface decode {
@@ -53,7 +49,6 @@ export const login = async (req: Request, res: Response) => {
         organizations: true,
       },
     });
-    console.log(teacher);
     if (!teacher) {
       return res.status(401).json({
         success: false,
@@ -93,9 +88,7 @@ export const login = async (req: Request, res: Response) => {
 
       const remainingTime = teacher.expAt.getTime() - Date.now();
       const expiresIn = `${Math.floor(remainingTime / 1000)}s`;
-
       const tempToken = generateAccessToken(payload, expiresIn);
-
       res.cookie("tempToken", tempToken, {
         httpOnly: true,
         secure: true,
@@ -119,11 +112,7 @@ export const login = async (req: Request, res: Response) => {
       org_id: teacher.organizations.id,
       role: teacher.role,
     };
-    // console.log(payload)
-
     const accessToken = generateAccessToken(payload);
-    // console.log(accessToken);
-
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,
@@ -157,31 +146,25 @@ export const changePassword = async (req: Request, res: Response) => {
     let { name } = req.body;
     const { password } = req.body;
     const token = req.cookies.tempToken;
-    console.log(token);
     if (!token) {
       return res.status(401).json({
         success: false,
         message: "logged in first with credential send on email",
       });
     }
-
     const decoded = (await verifyToken(token)) as decode;
-    // console.log(decoded);
     if (!decoded) {
       return res.status(400).json({
         success: false,
         message: "invalid or token expired",
       });
     }
-    console.log(decoded.id);
-    console.log(decoded.role);
     const user = await userRepo.findOne({
       where: {
         id: decoded.id as string,
         role: decoded.role,
       },
     });
-    // console.log("user", user);
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -232,7 +215,6 @@ export const changePassword = async (req: Request, res: Response) => {
 export const getQuizzes = async (req: RequestWithRole, res: Response) => {
   try {
     const { org_id, id } = req.user!;
-    console.log(org_id);
     if (!org_id || !id) {
       return res.status(400).json({
         status: false,
@@ -254,7 +236,6 @@ export const getQuizzes = async (req: RequestWithRole, res: Response) => {
         message: "no user found logged in again",
       });
     }
-    // console.log(student)
     const quizzes = await quizRepo.find({
       where: {
         organization: {
@@ -283,7 +264,6 @@ export const getQuizzes = async (req: RequestWithRole, res: Response) => {
       });
     }
 
-    console.log(quizzes);
     return res.status(200).json({
       success: true,
       message: "quiz fetched",
@@ -306,8 +286,6 @@ export const getQuizzesDetails = async (
   try {
     const { org_id, id } = req.user!;
     const { quiz_id } = req.params;
-    // console.log(org_id)
-    console.log(quiz_id);
     if (!org_id || !id) {
       return res.status(400).json({
         status: false,
@@ -356,7 +334,6 @@ export const getQuizzesDetails = async (
         .json({ success: false, message: "Quiz is not started" });
     }
 
-    console.log(quiz);
     const now = new Date();
     if (now < quiz.start_date) {
       return res
@@ -374,7 +351,6 @@ export const getQuizzesDetails = async (
       options: q.options ?? null,
       marks: q.marks,
     }));
-    console.log(safeQuestions);
 
     return res.status(200).json({
       success: true,
@@ -443,7 +419,6 @@ export const submitQuiz = async (req: RequestWithRole, res: Response) => {
     }
 
     const now = new Date();
-
     if (now < quiz.start_date) {
       return res.status(400).json({
         success: false,
@@ -473,40 +448,31 @@ export const submitQuiz = async (req: RequestWithRole, res: Response) => {
     }
 
     const questions = quiz.questions;
-
     let score = 0;
-
     questions.forEach((question, index) => {
       const studentAnswer = answers[index];
-
       if (studentAnswer === undefined) return;
-
       switch (question.type) {
-        case "multiple_choice": {
-          if (!Array.isArray(question.correctOptions)) break;
-          const correct = [...question.correctOptions].sort((a, b) => a - b);
-
-          const student = [...(studentAnswer as number[])].sort(
-            (a, b) => a - b,
-          );
-
-          const isCorrect =
+      case "multiple_choice": {
+        if (!Array.isArray(question.correctOptions)) break;
+        const correct = [...question.correctOptions].sort((a, b) => a - b);
+        const student = [...(studentAnswer as number[])].sort(
+          (a, b) => a - b,
+        );
+        const isCorrect =
             correct.length === student.length &&
             correct.every((value, i) => value === student[i]);
-
-          if (isCorrect) {
-            score += question.marks;
-          }
-
-          break;
+        if (isCorrect) {
+          score += question.marks;
         }
-
-        case "true_false": {
-          if (studentAnswer === question.correctOptions) {
-            score += question.marks;
-          }
-          break;
+        break;
+      }
+      case "true_false": {
+        if (studentAnswer === question.correctOptions) {
+          score += question.marks;
         }
+        break;
+      }
       }
     });
 
@@ -526,7 +492,6 @@ export const submitQuiz = async (req: RequestWithRole, res: Response) => {
     });
 
     await attemptRepo.save(attempt);
-
     return res.status(200).json({
       success: true,
       message: "Quiz submitted successfully.",

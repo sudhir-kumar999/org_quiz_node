@@ -50,8 +50,6 @@ export const adminLogin = async (req: Request, res: Response) => {
     }
 
     const verify = admin.password == password;
-    console.log(verify);
-
     if (!verify) {
       return res.status(401).json({
         success: false,
@@ -77,7 +75,7 @@ export const adminLogin = async (req: Request, res: Response) => {
     return res.status(200).json({
       success: true,
       message: "login successfully",
-        accessToken,
+      accessToken,
       data: {
         id: admin.id,
         email: admin.email,
@@ -97,50 +95,47 @@ export const adminLogin = async (req: Request, res: Response) => {
 
 export const createOrg = async (req: RequestWithRole, res: Response) => {
   try {
-    console.log("from org creation");
     const { title, max_teacher, max_student, email } = req.body;
+    if (!title || !email || max_teacher === undefined || max_student === undefined) {
+      return res.status(400).json({
+        success: false,
+        message: "All fields are required",
+      });
+    }
 
-if (!title || !email || max_teacher === undefined || max_student === undefined) {
-  return res.status(400).json({
-    success: false,
-    message: "All fields are required",
-  });
-}
+    if (typeof title !== "string" || title.trim().length < 3) {
+      return res.status(400).json({
+        success: false,
+        message: "Organization title must be at least 3 characters",
+      });
+    }
 
-if (typeof title !== "string" || title.trim().length < 3) {
-  return res.status(400).json({
-    success: false,
-    message: "Organization title must be at least 3 characters",
-  });
-}
+    if (!emailRegex.test(email.trim())) {
+      return res.status(400).json({
+        success: false,
+        message: "Invalid email address",
+      });
+    }
 
+    const teacherLimit = Number(max_teacher);
+    const studentLimit = Number(max_student);
 
-if (!emailRegex.test(email.trim())) {
-  return res.status(400).json({
-    success: false,
-    message: "Invalid email address",
-  });
-}
-
-const teacherLimit = Number(max_teacher);
-const studentLimit = Number(max_student);
-
-if (
-  Number.isNaN(teacherLimit) ||
+    if (
+      Number.isNaN(teacherLimit) ||
   Number.isNaN(studentLimit)
-) {
-  return res.status(400).json({
-    success: false,
-    message: "Max Teacher and Max Student must be valid numbers",
-  });
-}
+    ) {
+      return res.status(400).json({
+        success: false,
+        message: "Max Teacher and Max Student must be valid numbers",
+      });
+    }
 
-if (max_teacher <= 0 || max_student <= 0) {
-  return res.status(400).json({
-    success: false,
-    message: "Max Teacher and Max Student must be greater than 0",
-  });
-}
+    if (max_teacher <= 0 || max_student <= 0) {
+      return res.status(400).json({
+        success: false,
+        message: "Max Teacher and Max Student must be greater than 0",
+      });
+    }
 
     const admin_id = req.user?.id;
     const admin = await userRepo.findOne({
@@ -173,7 +168,6 @@ if (max_teacher <= 0 || max_student <= 0) {
       created_by: admin,
     };
     const orgSave = await orgRepo.save(orgDetails);
-    console.log(orgSave);
     const defPassword = crypto.randomBytes(3).toString("hex");
     const hashPassword = await bcrypt.hash(defPassword, 10);
     const userDetails = {
@@ -197,8 +191,7 @@ if (max_teacher <= 0 || max_student <= 0) {
     <p>Login before 7 days otherwise the link will expire</p>
     `;
 
-    const sendMail = await sendGrid(savedData.email, template);
-    console.log(sendMail);
+    await sendGrid(savedData.email, template);
     res.status(200).json({
       success: true,
       message: "invitation mail send on manager mail",
@@ -238,7 +231,6 @@ export const resendMail = async (req: Request, res: Response) => {
         organizations: true,
       },
     });
-    console.log(user);
     if (!user) {
       return res.status(401).json({
         success: false,
@@ -253,8 +245,6 @@ export const resendMail = async (req: Request, res: Response) => {
       });
     }
     const currDate = new Date(Date.now());
-    console.log(currDate);
-
     if (user.isDefPassUsed) {
       return res.status(400).json({
         success: false,
@@ -299,7 +289,6 @@ export const getOrganizations = async (
   res: Response
 ) => {
   try {
-    console.log("run")
     const adminId = req.user?.id;
 
     if (!adminId) {
@@ -308,7 +297,6 @@ export const getOrganizations = async (
         message: "Unauthorized",
       });
     }
-
     const organizations = await orgRepo.find({
       where: {
         created_by: {
@@ -320,18 +308,17 @@ export const getOrganizations = async (
         created_by: true,
       },
     });
-    console.log("check",organizations)
 
     return res.status(200).json({
       success: true,
       data: organizations,
     });
   } catch (error) {
-    console.error(error);
-
-    return res.status(500).json({
-      success: false,
-      message: "Internal Server Error",
-    });
+    if (error instanceof Error) {
+      res.status(500).json({
+        success: false,
+        message: error.message || "internal server error",
+      });
+    }
   }
 };

@@ -13,27 +13,27 @@ interface RequestWithRole extends Request{
 
 export const checkLogin=(req:RequestWithRole,res:Response,next:NextFunction)=>{
   try {
-        const token=req.cookies.accessToken;
-        if(!token){
-            return res.status(401).json({
-                success:false,
-                message:"You are not logged in. Log in first"
-            })
-        }
+    const token=req.cookies.accessToken;
+    if(!token){
+      return res.status(401).json({
+        success:false,
+        message:"You are not logged in. Log in first"
+      });
+    }
 
-        const decode = verifyToken(token) as decode
-        if(!decode){
-            return res.status(403).json({
-                success:false,
-                message:"wrong token, unauthorize user"
-            })
-        }
-        // console.log(decode)
+    const decode = verifyToken(token) as decode;
+    if(!decode){
+      return res.status(403).json({
+        success:false,
+        message:"wrong token, unauthorize user"
+      });
+    }
+    // console.log(decode)
 
-        req.user=decode
-        next()
+    req.user=decode;
+    next();
   } catch (error) {
-        if (error instanceof Error) {
+    if (error instanceof Error) {
       res.status(500).json({
         success: false,
         message: error.message || "internal server error",

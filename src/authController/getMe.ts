@@ -16,23 +16,20 @@ interface RequestWithRole extends Request {
 export const getMe = async (req: RequestWithRole, res: Response) => {
   try {
     const id = req.user?.id;
-    const accessToken=req.cookies.accessToken
-if(!accessToken){
-        return res.status(400).json({
+    const accessToken=req.cookies.accessToken;
+    if(!accessToken){
+      return res.status(400).json({
         success: false,
         message: "No token details found login again",
       });
     }
     if(!id){
-        return res.status(400).json({
+      return res.status(400).json({
         success: false,
         message: "No token details found login again",
       });
     }
-    console.log(id);
-    // console.log(req.user)
     const org_id = req.user;
-    console.log(org_id);
     const user = await userRepo.findOne({
       where: {
         id: id
@@ -41,7 +38,6 @@ if(!accessToken){
         organizations: true,
       },
     });
-    console.log(user);
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -52,7 +48,7 @@ if(!accessToken){
     return res.status(200).json({
       success: true,
       message: "User fetched",
-accessToken,
+      accessToken,
       data: {
         id:user.id,
         email:user.email,
@@ -60,7 +56,7 @@ accessToken,
         role:user.role,
         organization:user?.organizations,
         isBanned:user?.isBanned,
-  isDefPassUsed:user?.isDefPassUsed
+        isDefPassUsed:user?.isDefPassUsed
 
       }
     });

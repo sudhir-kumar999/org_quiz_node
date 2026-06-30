@@ -48,7 +48,6 @@ export const firstLogin = async (req: Request, res: Response) => {
         organizations: true,
       },
     });
-    console.log(manager);
     if (!manager) {
       return res.status(401).json({
         success: false,
@@ -63,7 +62,6 @@ export const firstLogin = async (req: Request, res: Response) => {
       });
     }
     const verify = await bcrypt.compare(password, manager.password);
-    console.log(verify);
     if (!verify) {
       return res.status(401).json({
         success: false,
@@ -85,7 +83,6 @@ export const firstLogin = async (req: Request, res: Response) => {
       org_id: manager.organizations.id,
     };
     const remainingTime = manager.expAt.getTime() - Date.now();
-    console.log(remainingTime);
     const expiresIn = `${Math.floor(remainingTime / 1000)}s`;
     const tempToken = generateAccessToken(payload, expiresIn);
 
@@ -115,9 +112,7 @@ export const chnagePassword = async (req: RequestWithRole, res: Response) => {
   try {
     let { name } = req.body;
     const { password } = req.body;
-    console.log(name, password);
     const token = req.cookies.tempToken;
-    console.log("EFWDSAS", token);
     if (!token) {
       return res.status(401).json({
         success: false,
@@ -126,22 +121,18 @@ export const chnagePassword = async (req: RequestWithRole, res: Response) => {
     }
 
     const decoded = (await verifyToken(token)) as decode;
-    console.log("manager", decoded);
     if (!decoded) {
       return res.status(400).json({
         success: false,
         message: "invalid or token expired",
       });
     }
-    // console.log(decoded.id);
-    // console.log(decoded.role);
     const user = await userRepo.findOne({
       where: {
         id: decoded.id as string,
         role: decoded.role,
       },
     });
-    console.log("user", user);
     if (!user) {
       return res.status(400).json({
         success: false,
@@ -173,8 +164,6 @@ export const chnagePassword = async (req: RequestWithRole, res: Response) => {
     user.name = name;
     user.isDefPassUsed = true;
     await userRepo.save(user);
-
-    // res.clearCookie("tempToken");
     res.clearCookie("tempToken", {
       httpOnly: true,
       secure: true,
@@ -222,7 +211,6 @@ export const login = async (req: Request, res: Response) => {
         organizations: true,
       },
     });
-    console.log(manager);
     if (!manager) {
       return res.status(401).json({
         success: false,
@@ -256,9 +244,7 @@ export const login = async (req: Request, res: Response) => {
 
       const remainingTime = manager.expAt.getTime() - Date.now();
       const expiresIn = `${Math.floor(remainingTime / 1000)}s`;
-
       const tempToken = generateAccessToken(payload, expiresIn);
-
       res.cookie("tempToken", tempToken, {
         httpOnly: true,
         secure: true,
@@ -266,8 +252,6 @@ export const login = async (req: Request, res: Response) => {
         path: "/",
         maxAge: remainingTime,
       });
-      // manager.isDefPassUsed = true;
-      // await userRepo.save(manager);
 
       return res.status(200).json({
         success: true,
@@ -284,11 +268,7 @@ export const login = async (req: Request, res: Response) => {
       org_id: manager.organizations.id,
       role: manager.role,
     };
-    // console.log(payload)
-
     const accessToken = generateAccessToken(payload);
-    // console.log(accessToken);
-
     res.cookie("accessToken", accessToken, {
       httpOnly: true,
       secure: true,
@@ -320,13 +300,8 @@ export const login = async (req: Request, res: Response) => {
 export const teacherInvite = async (req: RequestWithRole, res: Response) => {
   try {
     let { email } = req.body;
-    // console.log(req.user)
     const org_id = req.user?.org_id as string;
     const id = req.user?.id;
-    // console.log(id)
-    // console.log(org_id,"org id")
-    // console.log(typeof email)
-    //   console.log(Array.isArray(email));
     if (!email || !Array.isArray(email)) {
       return res.status(400).json({
         success: false,
@@ -338,7 +313,6 @@ export const teacherInvite = async (req: RequestWithRole, res: Response) => {
         id: org_id,
       },
     });
-    console.log("org details", orgDetails);
 
     if (!orgDetails) {
       return res.status(401).json({
@@ -353,7 +327,6 @@ export const teacherInvite = async (req: RequestWithRole, res: Response) => {
         role: "manager",
       },
     });
-    //   console.log(manager,"manager")
     if (!manager) {
       return res.status(401).json({
         success: false,
@@ -361,7 +334,6 @@ export const teacherInvite = async (req: RequestWithRole, res: Response) => {
       });
     }
 
-    console.log(email.length, "email length");
     if (email.length > orgDetails.max_teacher) {
       return res.status(400).json({
         success: false,
@@ -377,10 +349,8 @@ export const teacherInvite = async (req: RequestWithRole, res: Response) => {
         },
       },
     });
-    console.log(currTeacher, "curr teacher length");
 
     const remainingTeacher = orgDetails.max_teacher - currTeacher;
-    console.log(remainingTeacher, "rem teacher");
 
     if (email.length > remainingTeacher) {
       return res.status(400).json({
@@ -393,7 +363,6 @@ export const teacherInvite = async (req: RequestWithRole, res: Response) => {
     const failed = [];
 
     for (const emails of email) {
-      // console.log(emails);
       email = emails.trim().toLowerCase();
       if (!emailRegex.test(email)) {
         return res.status(400).json({
@@ -434,10 +403,8 @@ export const teacherInvite = async (req: RequestWithRole, res: Response) => {
         <p><strong>Password: ${defPassword}</strong></p>
         <p>Login before 7 days otherwise the link will expire</p>
         <a href="https://quiz-portal-seven.vercel.app/auth/login">Click here</a>
-
         `;
-
-      const sendMail = await sendGrid(teacherDetails.email, template);
+      await sendGrid(teacherDetails.email, template);
       success.push(email);
     }
     res.status(200).json({
@@ -594,9 +561,7 @@ export const reInvite = async (req: RequestWithRole, res: Response) => {
         message: "Email is required",
       });
     }
-
     email = email.trim().toLowerCase();
-
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
@@ -606,7 +571,6 @@ export const reInvite = async (req: RequestWithRole, res: Response) => {
 
     const managerId = req.user?.id;
     const organizationId = req.user?.org_id;
-
     if (!managerId) {
       return res.status(401).json({
         success: false,
@@ -689,29 +653,21 @@ export const reInvite = async (req: RequestWithRole, res: Response) => {
 
     const defaultPassword = crypto.randomBytes(3).toString("hex");
     const hashedPassword = await bcrypt.hash(defaultPassword, 10);
-
     user.password = hashedPassword;
     user.expAt = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000);
 
     await userRepo.save(user);
-
     const template = `
       <h1>Hello ${email}</h1>
-
       <p>Your invitation has been renewed for <strong>${organization.title}</strong>.</p>
-
       <p><strong>Email:</strong> ${email}</p>
       <p><strong>Temporary Password:</strong> ${defaultPassword}</p>
-
       <p>Please login and change your password.</p>
-
       <p>This invitation will expire after 7 days.</p>
         <a href="https://quiz-portal-seven.vercel.app/auth/login">Click here</a>
-
     `;
 
     await sendGrid(email, template);
-
     return res.status(200).json({
       success: true,
       message: "Invitation sent successfully",
@@ -723,7 +679,6 @@ export const reInvite = async (req: RequestWithRole, res: Response) => {
         message: error.message || "Internal Server Error",
       });
     }
-
     return res.status(500).json({
       success: false,
       message: "Internal Server Error",
@@ -732,19 +687,14 @@ export const reInvite = async (req: RequestWithRole, res: Response) => {
 };
 export const teacherDetails = async (req: RequestWithRole, res: Response) => {
   try {
-    // console.log(req.user)
     if (!req.user) {
       return res.status(401).json({
         success: false,
         message: "No user found. Login first",
       });
     }
-
     const id = req.user;
     const org_id = req.user;
-    //   console.log(id)
-    //   console.log(org_id)
-
     if (!id) {
       return res.status(400).json({
         success: false,
@@ -757,7 +707,6 @@ export const teacherDetails = async (req: RequestWithRole, res: Response) => {
         role: "manager",
       },
     });
-    //   console.log(manager)
     if (!manager) {
       return res.status(400).json({
         success: false,
@@ -779,7 +728,6 @@ export const teacherDetails = async (req: RequestWithRole, res: Response) => {
         },
       },
     });
-    // console.log("fgbdfsas",organization)
     if (!organization) {
       return res.status(400).json({
         success: false,
@@ -819,7 +767,6 @@ export const teacherDetails = async (req: RequestWithRole, res: Response) => {
 export const banUsers = async (req: RequestWithRole, res: Response) => {
   try {
     const { userId } = req.body;
-    console.log("hrgewrfedwsqa", userId);
     if (!req.user) {
       return res.status(401).json({
         success: false,
@@ -829,9 +776,6 @@ export const banUsers = async (req: RequestWithRole, res: Response) => {
 
     const id = req.user;
     const org_id = req.user;
-    //   console.log(id)
-    //   console.log(org_id)
-
     if (!id) {
       return res.status(400).json({
         success: false,
@@ -844,7 +788,6 @@ export const banUsers = async (req: RequestWithRole, res: Response) => {
         role: "manager",
       },
     });
-    //   console.log(manager)
     if (!manager) {
       return res.status(400).json({
         success: false,
@@ -866,7 +809,6 @@ export const banUsers = async (req: RequestWithRole, res: Response) => {
         },
       },
     });
-    // console.log("fgbdfsas",organization)
     if (!organization) {
       return res.status(400).json({
         success: false,
@@ -891,7 +833,6 @@ export const banUsers = async (req: RequestWithRole, res: Response) => {
           "Either no user found or You are only allowed to ban teacher and users",
       });
     }
-    console.log(user);
     user.isBanned = !user.isBanned;
     await userRepo.save(user);
     return res.status(200).json({

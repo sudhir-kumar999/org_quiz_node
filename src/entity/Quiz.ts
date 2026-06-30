@@ -20,13 +20,13 @@ interface QuizQuestion {
 @Entity("quizzes")
 export class Quiz {
   @PrimaryGeneratedColumn("uuid")
-  id!: string;
+    id!: string;
 
   @Column()
-  title!: string;
+    title!: string;
 
   @Column({ nullable: true })
-  description!: string;
+    description!: string;
 
   @Column({
     type: "jsonb",
@@ -40,39 +40,39 @@ export class Quiz {
   //   correctOption: number;
   //   marks: number;
   // }[];
-  questions!: QuizQuestion[];
+    questions!: QuizQuestion[];
 
   @Column({
     default: 0,
   })
-  total_marks!: number;
+    total_marks!: number;
 
   @Column({
     default: 0,
   })
-  total_questions!: number;
+    total_questions!: number;
 
   @Column({
     type: "timestamp",
   })
-  start_date!: Date;
+    start_date!: Date;
 
   @Column({
     type: "timestamp",
   })
-  end_date!: Date;
+    end_date!: Date;
 
   @Column({
     default: 30,
   })
-  duration!: number; // minutes
+    duration!: number; // minutes
   @Column({
     default: true,
   })
-  is_active!: boolean;
+    is_active!: boolean;
 
   @CreateDateColumn()
-  created_at!: Date;
+    created_at!: Date;
 
   @ManyToOne(() => User, {
     onDelete: "SET NULL",
@@ -80,7 +80,7 @@ export class Quiz {
   @JoinColumn({
     name: "created_by",
   })
-  created_by!: User;
+    created_by!: User;
 
   @ManyToOne(() => Organization, {
     onDelete: "CASCADE",
@@ -88,10 +88,8 @@ export class Quiz {
   @JoinColumn({
     name: "organization_id",
   })
-  organization!: Organization;
+    organization!: Organization;
 
   @OneToMany(()=>Attempt_quiz,(attempt)=>attempt.quiz)
-  attempts!:Attempt_quiz[]
-
-
+    attempts!:Attempt_quiz[];
 }
