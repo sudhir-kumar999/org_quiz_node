@@ -52,7 +52,7 @@ export const login = async (req: Request, res: Response) => {
     if (!teacher) {
       return res.status(401).json({
         success: false,
-        message: "Either you are not invited or you are not student",
+        message: "you are not a student or not invited",
       });
     }
     if (teacher.isBanned) {

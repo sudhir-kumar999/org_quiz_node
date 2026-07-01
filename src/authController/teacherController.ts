@@ -56,7 +56,7 @@ export const login = async (req: Request, res: Response) => {
     if (!teacher) {
       return res.status(401).json({
         success: false,
-        message: "Either you are not invited or you are not manager",
+        message: "you are not a teacher or not invited",
       });
     }
 

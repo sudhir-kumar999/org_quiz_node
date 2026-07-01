@@ -51,7 +51,7 @@ export const firstLogin = async (req: Request, res: Response) => {
     if (!manager) {
       return res.status(401).json({
         success: false,
-        message: "Either you are not invited or you are not manager",
+        message: "you are not a manager or not invited",
       });
     }
     if (manager.isDefPassUsed) {
@@ -214,7 +214,7 @@ export const login = async (req: Request, res: Response) => {
     if (!manager) {
       return res.status(401).json({
         success: false,
-        message: "Either you are not invited or you are not manager",
+        message: "you are not manager or not invited",
       });
     }
 
